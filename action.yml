@@ -1,0 +1,116 @@
+---
+name: mcvs-python-action
+description: |
+  The Mission Critical Vulnerability Scanner (MCVS) Python action.
+inputs:
+  pyinstaller-binary-name:
+    description: The name of the binary that is created using pyinstaller.
+  trivy-action-db:
+    default: 'ghcr.io/aquasecurity/trivy-db:2'
+    description: |
+      OCI repository to retrieve trivy-db from.
+  trivy-action-java-db:
+    description: |
+      OCI repository to retrieve trivy-java-db from.
+    default: 'ghcr.io/aquasecurity/trivy-java-db:1'
+  token:
+    description: |
+      A token is required to allow the mcvs-python-action to push the
+      package that it has been built, to the packages repository of the GitHub
+      repository where the action has been run and to pull the cached trivy DBs
+      to prevent bump into pull rate limits.
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    #
+    # YAML linting.
+    #
+    - run: |
+        pip install --user yamllint==1.35.1
+        yamllint .
+      shell: bash
+    #
+    # Install the python version that has been defined in the .python-version
+    # file.
+    #
+    - uses: actions/setup-python@v5.2.0
+      with:
+        cache: 'pip'
+    #
+    # Code security scanning.
+    #
+    - uses: anchore/scan-action@v4.1.2
+      with:
+        only-fixed: false
+        output-format: table
+        path: '.'
+        severity-cutoff: high
+    - uses: 030/trivyignore-validator-action@v0.1.2
+    - name: Log in to GitHub Packages Docker registry
+      shell: bash
+      run: |
+        echo "${{ inputs.token }}" |\
+          docker login ghcr.io -u ${{ github.actor }} --password-stdin
+    - uses: aquasecurity/trivy-action@0.24.0
+      env:
+        TRIVY_DB_REPOSITORY: ${{ inputs.trivy-action-db }}
+        TRIVY_JAVA_DB_REPOSITORY: ${{ inputs.trivy-action-java-db }}
+        TRIVY_PASSWORD: ${{ inputs.token }}
+        TRIVY_USERNAME: ${{ github.actor }}
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        exit-code: '1'
+        ignore-unfixed: true
+        severity: 'CRITICAL,HIGH'
+        trivyignores: .trivyignore
+    #
+    # If a requirements file exists in the project, then install the packages.
+    #
+    - name: Install PIP packages defined in requirements.txt
+      shell: bash
+      run: |
+        requirements_file=requirements.txt
+        if [ -f ${requirements_file} ]; then
+          pip install \
+            -r ${requirements_file}
+        fi
+    #
+    # Run pytest if 'import pytest' is found.
+    #
+    - name: Run tests
+      shell: bash
+      run: |
+        if grep -r 'import pytest' *.py; then
+          pytest \
+            --capture=no \
+            --cov=main test.py \
+            --cov-report term-missing \
+            --verbose
+        fi
+    #
+    # Build binary using pyinstaller and attach it to a release once a tag has
+    # been created.
+    #
+    # yamllint disable rule:line-length
+    - name: Check Conditions
+      id: condition_check
+      run: echo "Checking conditions..."
+      shell: bash
+      if: ${{ github.event_name == 'push' && contains(github.ref, 'refs/tags/') && inputs.pyinstaller-binary-name != '' }}
+    # yamllint enable rule:line-length
+    - name: Build binary using pyinstaller
+      if: ${{ steps.condition_check.outcome == 'success' }}
+      shell: bash
+      run: |
+        pip install pyinstaller==v6.10.0
+        pyinstaller --onefile main.py --name gomod-go-version-updater
+    - name: Attach a binary to a release
+      if: ${{ steps.condition_check.outcome == 'success' }}
+      uses: svenstaro/upload-release-action@2.9.0
+      with:
+        repo_token: ${{ inputs.token }}
+        file: dist/${{ inputs.pyinstaller-binary-name }}
+        asset_name: ${{ inputs.pyinstaller-binary-name }}
+        tag: ${{ github.ref }}
