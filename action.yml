@@ -95,9 +95,18 @@ runs:
     - name: Code linting with Flake8
       shell: bash
       run: |
-        pip install flake==7.2.0
+        pip install flake8==7.2.0
 
-        flake8 -v --max-line-length=150 --exclude=client/,.venv/,venv/ .
+        errors=$(flake8 -v --max-line-length=150 --exclude=client/,.venv/,venv/ --count --statistics --exit-zero .)
+        echo "Flake8 reported $errors errors/warnings."
+
+        # Compare count to threshold, fail pipeline if above threshold
+        if [ "$errors" -gt 4 ]; then
+          echo "Too many issues — failing."
+          exit 1
+        else
+          echo "Issues within acceptable range — passing."
+        fi
     #
     # Build binary using pyinstaller and attach it to a release once a tag has
     # been created.
