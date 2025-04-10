@@ -90,6 +90,15 @@ runs:
             --verbose
         fi
     #
+    # Lint code with Flake8
+    #
+    - name: Code linting with Flake8
+      shell: bash
+      run: |
+        pip install flake==7.2.0
+
+        flake8 -v --max-line-length=150 --exclude=client/,.venv/,venv/ .
+    #
     # Build binary using pyinstaller and attach it to a release once a tag has
     # been created.
     #
