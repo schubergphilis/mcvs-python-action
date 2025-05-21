@@ -16,7 +16,7 @@ jobs:
   MCVS-python-action:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4.1.1
+      - uses: actions/checkout@v4.2.2
       - uses: schubergphilis/mcvs-python-action@v0.1.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
