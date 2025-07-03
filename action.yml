@@ -40,7 +40,7 @@ runs:
     #
     # Code security scanning.
     #
-    - uses: anchore/scan-action@v6.2.0
+    - uses: anchore/scan-action@v6.4.0
       with:
         only-fixed: false
         output-format: table
