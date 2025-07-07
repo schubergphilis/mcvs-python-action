@@ -126,7 +126,7 @@ runs:
         pyinstaller --onefile main.py --name gomod-go-version-updater
     - name: Attach a binary to a release
       if: ${{ steps.condition_check.outcome == 'success' }}
-      uses: svenstaro/upload-release-action@2.9.0
+      uses: svenstaro/upload-release-action@2.11.2
       with:
         repo_token: ${{ inputs.token }}
         file: dist/${{ inputs.pyinstaller-binary-name }}
