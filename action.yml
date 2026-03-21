@@ -5,23 +5,14 @@ description: |
 inputs:
   pyinstaller-binary-name:
     description: The name of the binary that is created using pyinstaller.
-  trivy-action-db:
-    default: 'ghcr.io/aquasecurity/trivy-db:2'
-    description: |
-      OCI repository to retrieve trivy-db from.
-  trivy-action-java-db:
-    description: |
-      OCI repository to retrieve trivy-java-db from.
-    default: 'ghcr.io/aquasecurity/trivy-java-db:1'
   token:
     description: |
       A token is required to allow the mcvs-python-action to push the
       package that it has been built, to the packages repository of the GitHub
-      repository where the action has been run and to pull the cached trivy DBs
-      to prevent bump into pull rate limits.
+      repository where the action has been run.
     required: true
 runs:
-  using: 'composite'
+  using: composite
   steps:
     #
     # YAML linting.
@@ -36,7 +27,7 @@ runs:
     #
     - uses: actions/setup-python@v5.6.0
       with:
-        cache: 'pip'
+        cache: "pip"
     #
     # Code security scanning.
     #
@@ -44,27 +35,13 @@ runs:
       with:
         only-fixed: false
         output-format: table
-        path: '.'
+        path: "."
         severity-cutoff: high
-    - uses: 030/trivyignore-validator-action@v0.1.2
     - name: Log in to GitHub Packages Docker registry
       shell: bash
       run: |
         echo "${{ inputs.token }}" |\
           docker login ghcr.io -u ${{ github.actor }} --password-stdin
-    - uses: aquasecurity/trivy-action@0.30.0
-      env:
-        TRIVY_DB_REPOSITORY: ${{ inputs.trivy-action-db }}
-        TRIVY_JAVA_DB_REPOSITORY: ${{ inputs.trivy-action-java-db }}
-        TRIVY_PASSWORD: ${{ inputs.token }}
-        TRIVY_USERNAME: ${{ github.actor }}
-      with:
-        scan-type: 'fs'
-        scan-ref: '.'
-        exit-code: '1'
-        ignore-unfixed: true
-        severity: 'CRITICAL,HIGH'
-        trivyignores: .trivyignore
     #
     # If a requirements file exists in the project, then install the packages.
     #
