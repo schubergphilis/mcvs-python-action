@@ -15,33 +15,21 @@ runs:
   using: composite
   steps:
     #
-    # YAML linting.
-    #
-    - run: |
-        pip install --user yamllint==1.37.1
-        yamllint .
-      shell: bash
-    #
     # Install the python version that has been defined in the .python-version
     # file.
     #
-    - uses: actions/setup-python@v5.6.0
+    - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
       with:
-        cache: "pip"
+        cache: pip
     #
     # Code security scanning.
     #
-    - uses: anchore/scan-action@v6.2.0
+    - uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v6.2.0
       with:
         only-fixed: false
         output-format: table
-        path: "."
+        path: .
         severity-cutoff: high
-    - name: Log in to GitHub Packages Docker registry
-      shell: bash
-      run: |
-        echo "${{ inputs.token }}" |\
-          docker login ghcr.io -u ${{ github.actor }} --password-stdin
     #
     # If a requirements file exists in the project, then install the packages.
     #
@@ -69,6 +57,7 @@ runs:
     #
     # Lint code with Flake8
     #
+    # yamllint disable rule:line-length
     - name: Code linting with Flake8
       shell: bash
       run: |
@@ -88,7 +77,6 @@ runs:
     # Build binary using pyinstaller and attach it to a release once a tag has
     # been created.
     #
-    # yamllint disable rule:line-length
     - name: Check Conditions
       id: condition_check
       run: echo "Checking conditions..."
@@ -103,7 +91,7 @@ runs:
         pyinstaller --onefile main.py --name gomod-go-version-updater
     - name: Attach a binary to a release
       if: ${{ steps.condition_check.outcome == 'success' }}
-      uses: svenstaro/upload-release-action@2.9.0
+      uses: svenstaro/upload-release-action@04733e069f2d7f7f0b4aebc4fbdbce8613b03ccd # 2.9.0
       with:
         repo_token: ${{ inputs.token }}
         file: dist/${{ inputs.pyinstaller-binary-name }}
