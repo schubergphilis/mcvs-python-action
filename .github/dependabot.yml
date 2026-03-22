@@ -11,3 +11,23 @@ updates:
       github-actions-all:
         patterns:
           - "*"
+  - package-ecosystem: pip
+    directory: /configs/pip/flake8
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 5
+    groups:
+      github-actions-all:
+        patterns:
+          - "*"
+  - package-ecosystem: pip
+    directory: /configs/pip/pyinstaller
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 5
+    groups:
+      github-actions-all:
+        patterns:
+          - "*"
