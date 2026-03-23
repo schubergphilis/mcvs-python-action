@@ -1,0 +1,22 @@
+---
+name: general
+"on": pull_request
+permissions:
+  contents: read
+  packages: read
+jobs:
+  MCVS-general-action:
+    strategy:
+      matrix:
+        args:
+          - testing-type: lint-commit
+          - testing-type: lint-git
+          - testing-type: security-file-system
+          - testing-type: yamllint
+    runs-on: ubuntu-slim
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      # yamllint disable-line rule:line-length
+      - uses: schubergphilis/mcvs-general-action@f52c4433add29d8eff9036bf37b5b69a2c4cf28b # v0.5.8
+        with:
+          testing-type: ${{ matrix.args.testing-type }}
