@@ -37,6 +37,8 @@ jobs:
 | package-manager         | auto    |          | `auto`, `uv` or `pip`. `auto` uses uv (`uv sync --all-packages --frozen`) when `uv.lock` exists, else pip |
 | pyinstaller-binary-name |         |          | If populated, then a binary will be created using pyinstaller and attached to a release                    |
 | pyinstaller-entrypoint  | main.py |          | The Python script that pyinstaller turns into a binary                                                     |
+| type-check-args         |         |          | Arguments for the type checker, e.g. `--strict packages/*/src`. Globs are expanded |
+| type-checker            | none    |          | `mypy`, `pyright` or `none`. The type checker must be a project dependency |
 | token                   |         | x        | GitHub token required for Docker registry authentication and uploading release assets (if building binary) |
 
 <!-- markdownlint-enable MD013 -->

@@ -18,6 +18,14 @@ inputs:
   pyinstaller-entrypoint:
     default: main.py
     description: The Python script that pyinstaller turns into a binary.
+  type-check-args:
+    description: |
+      Arguments for the type checker, e.g. '--strict packages/*/src'. Globs
+      are expanded.
+  type-checker:
+    default: none
+    description: |
+      mypy, pyright or none. The type checker must be a project dependency.
   token:
     description: |
       A token is required to allow the mcvs-python-action to push the
@@ -56,6 +64,7 @@ runs:
       env:
         LINTER: ${{ inputs.linter }}
         PACKAGE_MANAGER: ${{ inputs.package-manager }}
+        TYPE_CHECKER: ${{ inputs.type-checker }}
       run: |
         pm=${PACKAGE_MANAGER}
         if [ "${pm}" = auto ]; then
@@ -64,11 +73,15 @@ runs:
         case "${pm}" in
           uv) run="uv run --no-sync" ;;
           pip) run="python3 -m" ;;
-          *) echo "::error::package-manager must be auto, uv or pip"; exit 1 ;;
+          *) echo "::error::bad package-manager"; exit 1 ;;
+        esac
+        case "${TYPE_CHECKER}" in
+          mypy|pyright|none) ;;
+          *) echo "::error::bad type-checker"; exit 1 ;;
         esac
         case "${LINTER}" in
           ''|ruff|flake8|none) ;;
-          *) echo "::error::linter must be ruff, flake8 or none"; exit 1 ;;
+          *) echo "::error::bad linter"; exit 1 ;;
         esac
         echo "package-manager=${pm}" >> "${GITHUB_OUTPUT}"
         echo "run=${run}" >> "${GITHUB_OUTPUT}"
@@ -115,6 +128,19 @@ runs:
       run: |
         ${RUN} ruff format --check .
         ${RUN} ruff check .
+    #
+    # Type check with mypy or pyright from the project environment.
+    #
+    - name: Type checking
+      if: ${{ inputs.type-checker != 'none' }}
+      shell: bash
+      env:
+        RUN: ${{ steps.resolve.outputs.run }}
+        TYPE_CHECK_ARGS: ${{ inputs.type-check-args }}
+        TYPE_CHECKER: ${{ inputs.type-checker }}
+      run: |
+        # Unquoted on purpose: split the args and expand globs.
+        ${RUN} ${TYPE_CHECKER} ${TYPE_CHECK_ARGS}
     #
     # Lint code with Flake8
     #
