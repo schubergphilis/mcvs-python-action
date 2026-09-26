@@ -33,6 +33,7 @@ jobs:
 
 | Option                  | Default | Required | Description                                                                                                |
 | :---------------------- | :------ | -------- | :--------------------------------------------------------------------------------------------------------- |
+| linter                  |         |          | `ruff`, `flake8` or `none`. Defaults to ruff for uv projects, flake8 for pip. ruff must be a project dependency and any finding fails |
 | package-manager         | auto    |          | `auto`, `uv` or `pip`. `auto` uses uv (`uv sync --all-packages --frozen`) when `uv.lock` exists, else pip |
 | pyinstaller-binary-name |         |          | If populated, then a binary will be created using pyinstaller and attached to a release                    |
 | pyinstaller-entrypoint  | main.py |          | The Python script that pyinstaller turns into a binary                                                     |
