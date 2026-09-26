@@ -3,6 +3,11 @@ name: mcvs-python-action
 description: |
   The Mission Critical Vulnerability Scanner (MCVS) Python action.
 inputs:
+  package-manager:
+    default: auto
+    description: |
+      How to install the project: auto, uv or pip. auto picks uv when a
+      uv.lock exists and pip with requirements.txt otherwise.
   pyinstaller-binary-name:
     description: The name of the binary that is created using pyinstaller.
   pyinstaller-entrypoint:
@@ -36,13 +41,41 @@ runs:
         path: .
         severity-cutoff: high
     #
-    # If a requirements file exists in the project, then install the packages.
+    # Pick the package manager. 'run' is the prefix used to call project tools
+    # like ruff, mypy and pytest from the installed environment.
     #
-    - name: Install PIP packages defined in requirements.txt
+    - name: Resolve package manager
+      id: resolve
       shell: bash
+      env:
+        PACKAGE_MANAGER: ${{ inputs.package-manager }}
+      run: |
+        pm=${PACKAGE_MANAGER}
+        if [ "${pm}" = auto ]; then
+          if [ -f uv.lock ]; then pm=uv; else pm=pip; fi
+        fi
+        case "${pm}" in
+          uv) run="uv run --no-sync" ;;
+          pip) run="python3 -m" ;;
+          *) echo "::error::package-manager must be auto, uv or pip"; exit 1 ;;
+        esac
+        echo "package-manager=${pm}" >> "${GITHUB_OUTPUT}"
+        echo "run=${run}" >> "${GITHUB_OUTPUT}"
+    # yamllint disable-line rule:line-length
+    - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      if: ${{ steps.resolve.outputs.package-manager == 'uv' }}
+    #
+    # Install the project: uv sync for uv, requirements.txt (if any) for pip.
+    #
+    - name: Install packages
+      shell: bash
+      env:
+        PACKAGE_MANAGER: ${{ steps.resolve.outputs.package-manager }}
       run: |
         requirements_file=requirements.txt
-        if [ -f ${requirements_file} ]; then
+        if [ "${PACKAGE_MANAGER}" = uv ]; then
+          uv sync --all-packages --frozen
+        elif [ -f ${requirements_file} ]; then
           pip install \
             --requirement ${requirements_file}
         fi
@@ -88,8 +121,14 @@ runs:
     #
     - name: Check Conditions
       id: condition_check
-      run: echo "Checking conditions..."
+      run: |
+        if [ "${PACKAGE_MANAGER}" = uv ]; then
+          echo "::error::pyinstaller builds are only supported for pip projects"
+          exit 1
+        fi
       shell: bash
+      env:
+        PACKAGE_MANAGER: ${{ steps.resolve.outputs.package-manager }}
       if: ${{ github.event_name == 'push' && contains(github.ref, 'refs/tags/') && inputs.pyinstaller-binary-name != '' }}
     # yamllint enable rule:line-length
     - name: Build binary using pyinstaller
