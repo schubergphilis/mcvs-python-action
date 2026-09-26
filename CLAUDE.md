@@ -24,22 +24,22 @@ The action is defined in `action.yml` and executes as a series of composite step
 
 - **Composite vs Docker**: Uses `using: composite` to avoid Docker overhead and enable caching
 - **Conditional Execution**: Steps like testing and binary building only run when applicable
-- **Token Authentication**: Requires GitHub token for package registry and Docker registry access
+- **Token Authentication**: Requires GitHub token to attach binaries to releases
 - **Version Pinning**: All tools are pinned to specific versions for reproducibility
 
 ## Version Constraints
 
-**CRITICAL**: The following versions are pinned in `action.yml`:
+**CRITICAL**: Actions are pinned by commit SHA in `action.yml`; pip packages are pinned with hashes in `configs/pip/*/requirements.txt`:
 
-- `yamllint==1.37.1` (action.yml:21)
-- `actions/setup-python@v5.6.0` (action.yml:28)
-- `anchore/scan-action@v6.2.0` (action.yml:34)
-- `flake8==7.2.0` (action.yml:75)
-- `pyinstaller==v6.13.0` (action.yml:102)
-- `svenstaro/upload-release-action@2.9.0` (action.yml:106)
+- `actions/setup-python@v7.0.0` (action.yml:22)
+- `anchore/scan-action@v7.4.2` (action.yml:29)
+- `flake8==7.4.1` (configs/pip/flake8/requirements.txt)
+- `pyinstaller==6.22.3` (configs/pip/pyinstaller/requirements.txt)
+- `svenstaro/upload-release-action@2.11.5` (action.yml:104)
 
 When updating dependencies:
-- Update the version in `action.yml`
+- Actions: update the commit SHA and the `# vX` comment in `action.yml`
+- Pip packages: update the version and all `--hash` entries (including transitive deps, required by `--require-hashes`)
 - Dependabot automatically creates PRs for GitHub Actions updates (see `.github/dependabot.yml`)
 - Python package versions must be updated manually
 
@@ -49,7 +49,7 @@ This action is tested via PR validation:
 
 ```yaml
 # Validation happens automatically on PRs via .github/workflows/mcvs-pr-validation.yml
-# Uses schubergphilis/mcvs-pr-validation-action@v0.2.0
+# Uses schubergphilis/mcvs-pr-validation-action@v0.2.2
 ```
 
 To test locally before committing:
@@ -84,7 +84,7 @@ The action has a **configurable error threshold** for Flake8:
 --exclude=client/,.venv/,venv/
 ```
 
-Pipeline fails if error count > 4 (action.yml:81-83). This threshold may need adjustment when adding strict linting rules.
+Pipeline fails if error count > 4 (action.yml:76). This threshold may need adjustment when adding strict linting rules.
 
 ## PyInstaller Binary Building
 
@@ -92,7 +92,7 @@ Binary building is **conditional** and requires:
 1. Push event to a tag (`refs/tags/*`)
 2. Non-empty `pyinstaller-binary-name` input
 
-The binary is automatically attached to GitHub releases (action.yml:89-111).
+The binary is automatically attached to GitHub releases (action.yml:86-111).
 
 ## Action Inputs
 
@@ -100,7 +100,7 @@ Required inputs when using this action:
 
 | Input | Required | Purpose |
 |-------|----------|---------|
-| `token` | Yes | GitHub token for package registry and Docker login |
+| `token` | Yes | GitHub token used to attach binaries to releases |
 | `pyinstaller-binary-name` | No | If set, builds and releases a binary |
 
 ## Important Workflow Notes
@@ -108,5 +108,4 @@ Required inputs when using this action:
 - Projects using this action must have a `.python-version` file to specify Python version
 - `requirements.txt` is optional - only installed if present
 - Tests only run if `import pytest` is found in Python files
-- Security scanning uses severity cutoff of "high" (action.yml:39)
-- Docker login required for security scanning (action.yml:40-44)
+- Security scanning uses severity cutoff of "high" (action.yml:34)
