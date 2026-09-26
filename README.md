@@ -34,6 +34,7 @@ jobs:
 | Option                  | Default | Required | Description                                                                                                |
 | :---------------------- | :------ | -------- | :--------------------------------------------------------------------------------------------------------- |
 | pyinstaller-binary-name |         |          | If populated, then a binary will be created using pyinstaller and attached to a release                    |
+| pyinstaller-entrypoint  | main.py |          | The Python script that pyinstaller turns into a binary                                                     |
 | token                   |         | x        | GitHub token required for Docker registry authentication and uploading release assets (if building binary) |
 
 <!-- markdownlint-enable MD013 -->

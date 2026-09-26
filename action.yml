@@ -5,6 +5,9 @@ description: |
 inputs:
   pyinstaller-binary-name:
     description: The name of the binary that is created using pyinstaller.
+  pyinstaller-entrypoint:
+    default: main.py
+    description: The Python script that pyinstaller turns into a binary.
   token:
     description: |
       A token is required to allow the mcvs-python-action to push the
@@ -92,13 +95,16 @@ runs:
     - name: Build binary using pyinstaller
       if: ${{ steps.condition_check.outcome == 'success' }}
       shell: bash
+      env:
+        BINARY_NAME: ${{ inputs.pyinstaller-binary-name }}
+        ENTRYPOINT: ${{ inputs.pyinstaller-entrypoint }}
       run: |
         python3 -m pip install \
           --require-hashes \
           --user \
           --requirement \
             ${GITHUB_ACTION_PATH}/configs/pip/pyinstaller/requirements.txt
-        python3 -m PyInstaller --onefile main.py --name gomod-go-version-updater
+        python3 -m PyInstaller --onefile "${ENTRYPOINT}" --name "${BINARY_NAME}"
     # yamllint disable-line rule:line-length
     - uses: svenstaro/upload-release-action@29e53e917877a24fad85510ded594ab3c9ca12de # 2.11.5
       name: Attach a binary to a release
