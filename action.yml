@@ -93,13 +93,12 @@ runs:
       if: ${{ steps.condition_check.outcome == 'success' }}
       shell: bash
       run: |
-        pip install pyinstaller==v6.13.0
         python3 -m pip install \
           --require-hashes \
           --user \
           --requirement \
             ${GITHUB_ACTION_PATH}/configs/pip/pyinstaller/requirements.txt
-        pyinstaller --onefile main.py --name gomod-go-version-updater
+        python3 -m PyInstaller --onefile main.py --name gomod-go-version-updater
     # yamllint disable-line rule:line-length
     - uses: svenstaro/upload-release-action@29e53e917877a24fad85510ded594ab3c9ca12de # 2.11.5
       name: Attach a binary to a release
