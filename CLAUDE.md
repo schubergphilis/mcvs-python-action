@@ -12,13 +12,19 @@ This is a **composite GitHub Action** (not a standalone application) that provid
 
 The action is defined in `action.yml` and executes as a series of composite steps:
 
-1. **YAML Linting**: Validates YAML files using yamllint
-2. **Python Environment Setup**: Installs Python version from `.python-version`
-3. **Security Scanning**: Uses Anchore scan-action to detect vulnerabilities
-4. **Dependency Installation**: Installs packages from `requirements.txt` if present
-5. **Testing**: Runs pytest if tests are detected
-6. **Code Linting**: Uses Flake8 with a configurable error threshold
-7. **Binary Building**: Conditionally builds PyInstaller binaries on tag releases
+1. **Python Environment Setup**: Installs Python version from `.python-version`
+2. **Security Scanning**: Uses Anchore scan-action (Grype) to detect vulnerabilities
+3. **Resolve**: Picks the package manager (uv when `uv.lock` exists, else pip) and validates inputs
+4. **Dependency Installation**: `uv sync --all-packages --frozen`, or `requirements.txt` if present
+5. **Testing**: Plain pytest for uv projects or when `test-paths`/`pytest-args` is set; otherwise the legacy `test.py` run
+6. **Code Linting**: ruff (default for uv) or Flake8 with an error threshold (default for pip)
+7. **Type Checking**: Optional mypy or pyright
+8. **Binary Building**: Conditionally builds PyInstaller binaries on tag releases (pip projects only)
+
+Project tools (ruff, mypy, pyright, pytest) run from the project environment via the
+`run` output of the resolve step (`uv run --no-sync` or `python3 -m`), so their versions
+and config come from the project. User inputs reach the shell through `env:`, never
+through `${{ }}` inside `run:`.
 
 ### Key Design Decisions
 
@@ -91,6 +97,7 @@ Pipeline fails if error count > 4 (action.yml:76). This threshold may need adjus
 Binary building is **conditional** and requires:
 1. Push event to a tag (`refs/tags/*`)
 2. Non-empty `pyinstaller-binary-name` input
+3. A pip project (uv projects fail with an error)
 
 The binary is automatically attached to GitHub releases (action.yml:86-111).
 
@@ -101,11 +108,17 @@ Required inputs when using this action:
 | Input | Required | Purpose |
 |-------|----------|---------|
 | `token` | Yes | GitHub token used to attach binaries to releases |
+| `package-manager` | No | `auto` (default), `uv` or `pip` |
+| `linter` | No | `ruff`, `flake8` or `none`; default depends on package manager |
+| `type-checker` / `type-check-args` | No | `mypy`, `pyright` or `none` (default) |
+| `test-paths` / `pytest-args` | No | Switch pip projects to plain pytest; `pytest-args` goes through `PYTEST_ADDOPTS` |
+| `working-directory` | No | Project directory for monorepos (default `.`) |
 | `pyinstaller-binary-name` | No | If set, builds and releases a binary |
+| `pyinstaller-entrypoint` | No | Script to build (default `main.py`) |
 
 ## Important Workflow Notes
 
 - Projects using this action must have a `.python-version` file to specify Python version
-- `requirements.txt` is optional - only installed if present
-- Tests only run if `import pytest` is found in Python files
-- Security scanning uses severity cutoff of "high" (action.yml:34)
+- `requirements.txt` is optional - only installed if present (pip projects)
+- Legacy pip tests only run if `import pytest` is found in root-level Python files
+- Security scanning uses severity cutoff of "high"
