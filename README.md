@@ -41,6 +41,7 @@ jobs:
 | type-checker            | none    |          | `mypy`, `pyright` or `none`. The type checker must be a project dependency |
 | pytest-args             |         |          | Extra pytest arguments, e.g. `-m "not integration"`. Quoting works as in a shell |
 | test-paths              |         |          | Paths to test, e.g. `packages/*/tests`. Defaults to pytest's own discovery |
+| working-directory       | .       |          | Directory of the Python project, for monorepos. For a uv workspace this is the workspace root |
 | token                   |         | x        | GitHub token required for Docker registry authentication and uploading release assets (if building binary) |
 
 <!-- markdownlint-enable MD013 -->
