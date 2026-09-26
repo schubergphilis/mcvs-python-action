@@ -3,6 +3,11 @@ name: mcvs-python-action
 description: |
   The Mission Critical Vulnerability Scanner (MCVS) Python action.
 inputs:
+  linter:
+    description: |
+      ruff, flake8 or none. Defaults to ruff for uv projects and flake8 for
+      pip projects. ruff runs from the project environment with the project's
+      own configuration, and any finding fails the build.
   package-manager:
     default: auto
     description: |
@@ -41,13 +46,15 @@ runs:
         path: .
         severity-cutoff: high
     #
-    # Pick the package manager. 'run' is the prefix used to call project tools
-    # like ruff, mypy and pytest from the installed environment.
+    # Pick the package manager and check the inputs. 'run' is the prefix used
+    # to call project tools like ruff, mypy and pytest from the installed
+    # environment.
     #
-    - name: Resolve package manager
+    - name: Resolve package manager and check inputs
       id: resolve
       shell: bash
       env:
+        LINTER: ${{ inputs.linter }}
         PACKAGE_MANAGER: ${{ inputs.package-manager }}
       run: |
         pm=${PACKAGE_MANAGER}
@@ -58,6 +65,10 @@ runs:
           uv) run="uv run --no-sync" ;;
           pip) run="python3 -m" ;;
           *) echo "::error::package-manager must be auto, uv or pip"; exit 1 ;;
+        esac
+        case "${LINTER}" in
+          ''|ruff|flake8|none) ;;
+          *) echo "::error::linter must be ruff, flake8 or none"; exit 1 ;;
         esac
         echo "package-manager=${pm}" >> "${GITHUB_OUTPUT}"
         echo "run=${run}" >> "${GITHUB_OUTPUT}"
@@ -93,10 +104,23 @@ runs:
             --verbose
         fi
     #
+    # Lint code with ruff, using the project's own configuration.
+    #
+    - name: Code linting with ruff
+      # yamllint disable-line rule:line-length
+      if: ${{ inputs.linter == 'ruff' || (inputs.linter == '' && steps.resolve.outputs.package-manager == 'uv') }}
+      shell: bash
+      env:
+        RUN: ${{ steps.resolve.outputs.run }}
+      run: |
+        ${RUN} ruff format --check .
+        ${RUN} ruff check .
+    #
     # Lint code with Flake8
     #
     # yamllint disable rule:line-length
     - name: Code linting with Flake8
+      if: ${{ inputs.linter == 'flake8' || (inputs.linter == '' && steps.resolve.outputs.package-manager == 'pip') }}
       shell: bash
       run: |
         python3 -m pip install \
