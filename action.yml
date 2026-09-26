@@ -34,6 +34,11 @@ inputs:
     description: |
       Paths to test, e.g. 'packages/*/tests'. Globs are expanded. Defaults to
       pytest's own discovery.
+  working-directory:
+    default: .
+    description: |
+      Directory of the Python project, for monorepos. For a uv workspace this
+      is the workspace root.
   token:
     description: |
       A token is required to allow the mcvs-python-action to push the
@@ -51,6 +56,8 @@ runs:
     - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
       with:
         cache: pip
+        # yamllint disable-line rule:line-length
+        python-version-file: ${{ inputs.working-directory != '.' && format('{0}/.python-version', inputs.working-directory) || '' }}
     #
     # Code security scanning.
     #
@@ -69,6 +76,7 @@ runs:
     - name: Resolve package manager and check inputs
       id: resolve
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
       env:
         LINTER: ${{ inputs.linter }}
         PACKAGE_MANAGER: ${{ inputs.package-manager }}
@@ -96,11 +104,14 @@ runs:
     # yamllint disable-line rule:line-length
     - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       if: ${{ steps.resolve.outputs.package-manager == 'uv' }}
+      with:
+        working-directory: ${{ inputs.working-directory }}
     #
     # Install the project: uv sync for uv, requirements.txt (if any) for pip.
     #
     - name: Install packages
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
       env:
         PACKAGE_MANAGER: ${{ steps.resolve.outputs.package-manager }}
       run: |
@@ -118,6 +129,7 @@ runs:
     #
     - name: Run tests
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
       env:
         PACKAGE_MANAGER: ${{ steps.resolve.outputs.package-manager }}
         # pytest splits PYTEST_ADDOPTS like a shell, so quoting in the input
@@ -144,6 +156,7 @@ runs:
       # yamllint disable-line rule:line-length
       if: ${{ inputs.linter == 'ruff' || (inputs.linter == '' && steps.resolve.outputs.package-manager == 'uv') }}
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
       env:
         RUN: ${{ steps.resolve.outputs.run }}
       run: |
@@ -155,6 +168,7 @@ runs:
     - name: Type checking
       if: ${{ inputs.type-checker != 'none' }}
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
       env:
         RUN: ${{ steps.resolve.outputs.run }}
         TYPE_CHECK_ARGS: ${{ inputs.type-check-args }}
@@ -169,6 +183,7 @@ runs:
     - name: Code linting with Flake8
       if: ${{ inputs.linter == 'flake8' || (inputs.linter == '' && steps.resolve.outputs.package-manager == 'pip') }}
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
       run: |
         python3 -m pip install \
           --require-hashes \
@@ -198,6 +213,7 @@ runs:
           exit 1
         fi
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
       env:
         PACKAGE_MANAGER: ${{ steps.resolve.outputs.package-manager }}
       if: ${{ github.event_name == 'push' && contains(github.ref, 'refs/tags/') && inputs.pyinstaller-binary-name != '' }}
@@ -205,6 +221,7 @@ runs:
     - name: Build binary using pyinstaller
       if: ${{ steps.condition_check.outcome == 'success' }}
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
       env:
         BINARY_NAME: ${{ inputs.pyinstaller-binary-name }}
         ENTRYPOINT: ${{ inputs.pyinstaller-entrypoint }}
@@ -221,6 +238,7 @@ runs:
       if: ${{ steps.condition_check.outcome == 'success' }}
       with:
         repo_token: ${{ inputs.token }}
-        file: dist/${{ inputs.pyinstaller-binary-name }}
+        # yamllint disable-line rule:line-length
+        file: ${{ inputs.working-directory }}/dist/${{ inputs.pyinstaller-binary-name }}
         asset_name: ${{ inputs.pyinstaller-binary-name }}
         tag: ${{ github.ref }}
