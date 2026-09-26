@@ -3,6 +3,8 @@
 [![GitHub release](https://img.shields.io/github/v/release/schubergphilis/mcvs-python-action)](https://github.com/schubergphilis/mcvs-python-action/releases)
 [![License](https://img.shields.io/github/license/schubergphilis/mcvs-python-action)](LICENSE)
 
+<img src="./assets/logos/mcvs-python-action.png" width="250">
+
 Mission Critical Vulnerability Scanner (MCVS) Python Action. Create Python code without high and critical vulnerabilities.
 
 ## Usage
