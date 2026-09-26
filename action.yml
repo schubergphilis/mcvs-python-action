@@ -26,6 +26,14 @@ inputs:
     default: none
     description: |
       mypy, pyright or none. The type checker must be a project dependency.
+  pytest-args:
+    description: |
+      Extra pytest arguments, e.g. '-m "not integration"'. Quoting works as in
+      a shell.
+  test-paths:
+    description: |
+      Paths to test, e.g. 'packages/*/tests'. Globs are expanded. Defaults to
+      pytest's own discovery.
   token:
     description: |
       A token is required to allow the mcvs-python-action to push the
@@ -104,12 +112,25 @@ runs:
             --requirement ${requirements_file}
         fi
     #
-    # Run pytest if 'import pytest' is found.
+    # Run pytest from the project environment for uv projects or when a test
+    # input is set. Otherwise keep the legacy behaviour: run test.py with
+    # coverage of main if 'import pytest' is found.
     #
     - name: Run tests
       shell: bash
+      env:
+        PACKAGE_MANAGER: ${{ steps.resolve.outputs.package-manager }}
+        # pytest splits PYTEST_ADDOPTS like a shell, so quoting in the input
+        # works without eval.
+        PYTEST_ADDOPTS: ${{ inputs.pytest-args }}
+        RUN: ${{ steps.resolve.outputs.run }}
+        TEST_PATHS: ${{ inputs.test-paths }}
       run: |
-        if grep -r 'import pytest' *.py; then
+        if [ "${PACKAGE_MANAGER}" = uv ] ||
+          [ -n "${PYTEST_ADDOPTS}${TEST_PATHS}" ]; then
+          # Unquoted on purpose: split the paths and expand globs.
+          ${RUN} pytest ${TEST_PATHS}
+        elif grep -r 'import pytest' *.py; then
           pytest \
             --capture=no \
             --cov=main test.py \
