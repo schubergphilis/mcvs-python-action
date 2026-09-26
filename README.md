@@ -22,6 +22,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@some-hash # v4.2.2
+        with:
+          persist-credentials: false
       - uses: schubergphilis/mcvs-python-action@some-hash # v0.2.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -35,6 +37,10 @@ jobs:
 | token                   |         | x        | GitHub token required for Docker registry authentication and uploading release assets (if building binary) |
 
 <!-- markdownlint-enable MD013 -->
+
+`persist-credentials: false` keeps the token out of `.git/config`, so
+third-party packages installed from `requirements.txt` cannot read it. The
+action receives the token only through the `token` input.
 
 Define the Python version of the project by adding it to a `.python-version`
 file.
